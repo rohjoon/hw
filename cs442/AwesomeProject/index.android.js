@@ -19,11 +19,11 @@ exports.framework = 'React';
 exports.title = 'Weather';
 exports.description = 'CS442 Proj1. Displaying weather infomation';
 
-var apiKey = "6d6da3a3b783f7e4f2b9cb9fa9d6752c";
-
+var baseurl = "http://api.wunderground.com/api/a9a62b200e5ec752/";
+// http://api.wunderground.com/api/cf2f35b0c17a9ca3/geolookup/q/36.368982,127.363029.json
 export default class AwesomeProject extends Component {
    getCurrentWeather(lat, lon) {
-    var url = 'http://api.openweathermap.org/data/2.5/weather?appid=' + apiKey + '&lat=' + lat + '&lon=' + lon;
+    var url = baseurl + "conditions/q/" + lat + ',' + lon + ".json";
 
     var request = new XMLHttpRequest();
     request.onreadystatechange = (e) => {
@@ -32,12 +32,11 @@ export default class AwesomeProject extends Component {
       }
 
       if (request.status === 200) {
-        var currentWeather = JSON.parse(request.responseText);
+        var currentWeather = JSON.parse(request.responseText).current_observation;
         this.setState({currentWeather});
-        // console.log('success', request.responseText);
+        console.log('success', request.responseText);
       } else {
-        // console.warn('error');
-          console.error(error);
+          console.error(e);
       }
     };
 
@@ -45,8 +44,8 @@ export default class AwesomeProject extends Component {
     request.send();
   }
 
-   getFutureWeather(lat, lon) {
-    var url = 'http://api.openweathermap.org/data/2.5/forecast?appid=' + apiKey + '&lat=' + lat + '&lon=' + lon;
+   getForecast(lat, lon) {
+    var url = baseurl + "forecast/q/" + lat + ',' + lon + ".json";
     var request = new XMLHttpRequest();
     request.onreadystatechange = (e) => {
       if (request.readyState !== 4) {
@@ -54,11 +53,10 @@ export default class AwesomeProject extends Component {
       }
 
       if (request.status === 200) {
-        var futureWeather = JSON.parse(request.responseText);
-        this.setState({futureWeather});
+        var forecast = JSON.parse(request.responseText).forecast;
+        this.setState({forecast});
       } else {
-        // console.warn('error');
-          console.error(error);
+          console.error(e);
       }
     };
 
@@ -69,7 +67,7 @@ export default class AwesomeProject extends Component {
   refreshWeatherInfo = (lat, lon) =>
   {
     this.getCurrentWeather(lat, lon);
-    this.getFutureWeather(lat, lon);
+    this.getForecast(lat, lon);
   };
 
   refreshGeoInfo = () =>
@@ -82,7 +80,7 @@ export default class AwesomeProject extends Component {
       {enableHighAccuracy: true, timeout: 20000, maximumAge: 1000}
     );
     this.watchID = navigator.geolocation.watchPosition((position) => {
-      alert ("lat : " + position.coords.latitude + ", long : " + position.coords.longitude);
+      // alert ("lat : " + position.coords.latitude + ", long : " + position.coords.longitude);
       this.refreshWeatherInfo(position.coords.latitude, position.coords.longitude);
     });
   };
@@ -101,25 +99,46 @@ export default class AwesomeProject extends Component {
   }
 
   setTitleText = (text) => { this.titleTxt = text };
-  getTitle()
+  
+  renderCurrentWeather()
   {
-    return (       
-     <Text style={styles.title}>
-      { this.state && this.state.currentWeather != null ?  this.state.currentWeather.name : "Welcome"}
-     </Text>
+    if (this.state == null ||  this.state.currentWeather == null)
+    {
+      return (
+        <Text style={styles.title}>
+        " Cannot fetch Geo Infomation "
+       </Text>
+       );
+    }
+
+    var maxMinTmp = this.state.forecast != null ? this.state.forecast.simpleforecast.forecastday[0].high.celsius + "°C /" + this.state.forecast.simpleforecast.forecastday[0].low.celsius + "°C": "";
+
+    return (
+      <View>
+        <Text style={styles.title}>
+          { this.state.currentWeather.display_location.city }
+        </Text>
+        <Text style={styles.currentWeather}>
+          { this.state.currentWeather.temp_c + "°C /  " + this.state.currentWeather.weather}
+        </Text>
+        <Image source={{uri:this.state.currentWeather.icon_url}} 
+                style={{width: 40, height: 40}} />
+
+        <Text>
+         { "Temperature : " +  maxMinTmp }
+        </Text>
+
+
+        <Text>
+         { this.state.currentWeather.relative_humidity + " chance of rain" }
+        </Text>
+
+      </View>
     );
   }
 
-  getBody()
-  {
-    return (
-          <Text style={styles.instructions}>
-            To get started, edit index.android.js
-          </Text>
-          );
-  }
 
-  renderButton = () =>
+  renderRefreshButton = () =>
   (
       <TouchableNativeFeedback
           onPress={this.refresh}
@@ -131,16 +150,16 @@ export default class AwesomeProject extends Component {
       </TouchableNativeFeedback>
   );
 
-
   render() {
     return (
       <View style={styles.container}>
         <View style={{flex: 3}}>
-        { this.renderButton() }
-        { this.getTitle() }        
-        { this.getBody()  }
+        { this.renderRefreshButton() }
+        { this.renderCurrentWeather() }      
         </View>
         <View style={{flex: 3}}>
+
+        
         </View>
         <View style={{flex: 2}}>
         </View>
