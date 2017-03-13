@@ -23,7 +23,6 @@ var baseurl = "http://api.wunderground.com/api/a9a62b200e5ec752/";
 // http://api.wunderground.com/api/cf2f35b0c17a9ca3/geolookup/q/36.368982,127.363029.json
 export default class AwesomeProject extends Component {
 
-
   sendRequest(url, succeddedFunc) 
   {
       var request = new XMLHttpRequest();
@@ -40,17 +39,20 @@ export default class AwesomeProject extends Component {
 
     request.open('GET', url);
     request.send();
-
   }
+
+  _setDecimal = (num)=>(Math.ceil(num) == num ? num + ".0" : num);
+  _getJsonStr = (lat, lon) => ( this._setDecimal(lat) + "," + this._setDecimal(lon) + ".json");
+
   getCurrentWeather(lat, lon) {
-    var url = baseurl + "conditions/q/" + lat + ',' + lon + ".json";
+    var url = baseurl + "conditions/q/" + this._getJsonStr(lat, lon);
     this.sendRequest(url, (responseText)=>{
       var currentWeather = JSON.parse(responseText).current_observation;
       this.setState({currentWeather});
     });    
   }
   getForecast(lat, lon) {
-    var url = baseurl + "forecast/q/" + lat + ',' + lon + ".json";
+    var url = baseurl + "forecast/q/" + this._getJsonStr(lat, lon);
     this.sendRequest(url, (responseText)=>{
       var forecast = JSON.parse(responseText).forecast;
       this.setState({forecast});
@@ -59,7 +61,7 @@ export default class AwesomeProject extends Component {
 
   fetchHourlyWeather = (lat, lon) => 
   {
-    var url = baseurl + "hourly/q/" + lat + ',' + lon + ".json";
+    var url = baseurl + "hourly/q/" + this._getJsonStr(lat, lon);
     this.sendRequest(url, (responseText)=>{
       var hourlyForecast = JSON.parse(responseText).hourly_forecast;
       this.setState({hourlyForecast});
@@ -83,7 +85,6 @@ export default class AwesomeProject extends Component {
       {enableHighAccuracy: true, timeout: 20000, maximumAge: 1000}
     );
     this.watchID = navigator.geolocation.watchPosition((position) => {
-      // alert ("lat : " + position.coords.latitude + ", long : " + position.coords.longitude);
       this.refreshWeatherInfo(position.coords.latitude, position.coords.longitude);
     });
   };
@@ -127,12 +128,9 @@ export default class AwesomeProject extends Component {
         </Text>
         <Image source={{uri:this.state.currentWeather.icon_url}} 
                 style={{width: 40, height: 40}} />
-
         <Text>
          { "Temperature : " +  maxMinTmp }
         </Text>
-
-
         <Text>
          { rainPosiblilty }
         </Text>
@@ -141,6 +139,59 @@ export default class AwesomeProject extends Component {
     );
   }
 
+
+  _render3DayForecast = (json) => (
+      <View style={styles.dayItem} >
+      <Text> { json.date.weekday } </Text>
+      <Image source={{uri:json.icon_url}} 
+        style={{width: 40, height: 40}} />
+      <Text> { json.high.celsius + "°C /" + json.low.celsius + "°C" } </Text>
+      <Text> { json.pop + "%" } </Text>
+      </View>
+    );
+  
+  render3DayForecast = () => {
+    if (this.state == null ||  this.state.forecast == null)
+    {
+      return (
+        <Text style={styles.title}>
+        " No forecast data "
+        </Text>
+      );
+    }
+    
+    return (
+      <View style={styles._3DayContainer}>
+        { this.state.forecast.simpleforecast.forecastday.slice(1).map(this._render3DayForecast) }
+      </View>
+    );
+  };
+
+  _renderHourlyForecast = (json) => (
+      <View style={styles.hourlyItem}>
+      <Text> { json.FCTTIME.hour_padded } </Text>
+      <Image source={{uri:json.icon_url}} 
+        style={{width: 40, height: 40}} />
+      <Text> { json.temp.metric + "°C" } </Text>
+      <Text> { json.pop + "%" } </Text>
+      </View>
+    );
+
+  renderHourlyForecast = () => {
+    if (this.state == null ||  this.state.hourlyForecast == null)
+    {
+      return (
+        <Text style={styles.title}>
+        " No hourly forecast data "
+        </Text>
+      );
+    }
+    return (
+      <View style={styles._hourlyContainer}>
+        { this.state.hourlyForecast.slice(0, 5).map(this._renderHourlyForecast) }
+      </View>
+    );
+  };
 
   renderRefreshButton = () =>
   (
@@ -162,10 +213,10 @@ export default class AwesomeProject extends Component {
         { this.renderCurrentWeather() }      
         </View>
         <View style={{flex: 3}}>
-
-
+        { this.render3DayForecast() }
         </View>
         <View style={{flex: 2}}>
+        { this.renderHourlyForecast() }
         </View>
         
       </View>
@@ -184,6 +235,26 @@ const styles = StyleSheet.create({
   subcontainer: {
     flex: 1, 
     flexDirection: 'row'
+  }, 
+  _3DayContainer :{
+    flex: 1, 
+    alignItems: 'center',
+    flexDirection: 'row', 
+    justifyContent:'space-between',
+  },
+  dayItem : {
+    width: 100,
+    alignItems: 'center',
+  },
+  _hourlyContainer:{
+    flex: 1, 
+    alignItems: 'center',
+    flexDirection: 'row', 
+    justifyContent:'space-between',
+  },
+  hourlyItem  :{
+    width: 70,
+    alignItems: 'center',
   }, 
   title: {
     fontSize: 40,
