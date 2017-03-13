@@ -22,52 +22,55 @@ exports.description = 'CS442 Proj1. Displaying weather infomation';
 var baseurl = "http://api.wunderground.com/api/a9a62b200e5ec752/";
 // http://api.wunderground.com/api/cf2f35b0c17a9ca3/geolookup/q/36.368982,127.363029.json
 export default class AwesomeProject extends Component {
-   getCurrentWeather(lat, lon) {
+
+
+  sendRequest(url, succeddedFunc) 
+  {
+      var request = new XMLHttpRequest();
+      request.onreadystatechange = (e) => {
+      if (request.readyState !== 4) {
+        return;
+      }
+      if (request.status === 200) {
+        succeddedFunc(request.responseText);
+      } else {
+          console.error(e);
+      }
+    };
+
+    request.open('GET', url);
+    request.send();
+
+  }
+  getCurrentWeather(lat, lon) {
     var url = baseurl + "conditions/q/" + lat + ',' + lon + ".json";
-
-    var request = new XMLHttpRequest();
-    request.onreadystatechange = (e) => {
-      if (request.readyState !== 4) {
-        return;
-      }
-
-      if (request.status === 200) {
-        var currentWeather = JSON.parse(request.responseText).current_observation;
-        this.setState({currentWeather});
-        console.log('success', request.responseText);
-      } else {
-          console.error(e);
-      }
-    };
-
-    request.open('GET', url);
-    request.send();
+    this.sendRequest(url, (responseText)=>{
+      var currentWeather = JSON.parse(responseText).current_observation;
+      this.setState({currentWeather});
+    });    
   }
-
-   getForecast(lat, lon) {
+  getForecast(lat, lon) {
     var url = baseurl + "forecast/q/" + lat + ',' + lon + ".json";
-    var request = new XMLHttpRequest();
-    request.onreadystatechange = (e) => {
-      if (request.readyState !== 4) {
-        return;
-      }
-
-      if (request.status === 200) {
-        var forecast = JSON.parse(request.responseText).forecast;
-        this.setState({forecast});
-      } else {
-          console.error(e);
-      }
-    };
-
-    request.open('GET', url);
-    request.send();
+    this.sendRequest(url, (responseText)=>{
+      var forecast = JSON.parse(responseText).forecast;
+      this.setState({forecast});
+    });
   }
+
+  fetchHourlyWeather = (lat, lon) => 
+  {
+    var url = baseurl + "hourly/q/" + lat + ',' + lon + ".json";
+    this.sendRequest(url, (responseText)=>{
+      var hourlyForecast = JSON.parse(responseText).hourly_forecast;
+      this.setState({hourlyForecast});
+    });
+  };
 
   refreshWeatherInfo = (lat, lon) =>
   {
     this.getCurrentWeather(lat, lon);
     this.getForecast(lat, lon);
+    this.fetchHourlyWeather(lat, lon);
   };
 
   refreshGeoInfo = () =>
@@ -111,6 +114,7 @@ export default class AwesomeProject extends Component {
        );
     }
 
+    var rainPosiblilty = this.state.hourlyForecast != null ? this.state.hourlyForecast[0].pop + "% chance of rain" : "No Rain Data";
     var maxMinTmp = this.state.forecast != null ? this.state.forecast.simpleforecast.forecastday[0].high.celsius + "°C /" + this.state.forecast.simpleforecast.forecastday[0].low.celsius + "°C": "";
 
     return (
@@ -130,7 +134,7 @@ export default class AwesomeProject extends Component {
 
 
         <Text>
-         { this.state.currentWeather.relative_humidity + " chance of rain" }
+         { rainPosiblilty }
         </Text>
 
       </View>
@@ -146,7 +150,7 @@ export default class AwesomeProject extends Component {
           <Image 
                   style={styles.button}
                   source={require('./img/refresh.png')} 
-                  style={{width: 40, height: 40}} />
+                  style={{width: 20, height: 20}} />
       </TouchableNativeFeedback>
   );
 
@@ -159,7 +163,7 @@ export default class AwesomeProject extends Component {
         </View>
         <View style={{flex: 3}}>
 
-        
+
         </View>
         <View style={{flex: 2}}>
         </View>
