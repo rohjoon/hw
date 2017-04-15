@@ -11,3 +11,6 @@
 - Display progress bar, When downloading files
 - No restriction on the UI for showing contents
 - Always show Google Map
+
+- Display walking distances (1 extra point)
+- use cache on video and image. 
